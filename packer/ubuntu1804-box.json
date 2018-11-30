@@ -1,0 +1,95 @@
+{
+  "variables": {
+    "OS_VERSION": "ubuntu-18.04.1-live-server-amd64",
+    "DISK_SIZE": 65536,
+    "MEMORY": 4096,
+    "CPUS": 2,
+    "TMP_SSH_PUB": "/tmp/vagrant.pub"
+  },
+  "builders": [
+    {
+      "type": "virtualbox-iso",
+      "boot_command": [
+        "<esc><wait>",
+        "<esc><wait>",
+        "<enter><wait>",
+        "/install/vmlinuz<wait>",
+        " auto<wait>",
+        " console-setup/ask_detect=false<wait>",
+        " console-setup/layoutcode=us<wait>",
+        " console-setup/modelcode=pc105<wait>",
+        " debconf/frontend=noninteractive<wait>",
+        " debian-installer=en_US<wait>",
+        " fb=false<wait>",
+        " initrd=/install/initrd.gz<wait>",
+        " kbd-chooser/method=us<wait>",
+        " keyboard-configuration/layout=USA<wait>",
+        " keyboard-configuration/variant=USA<wait>",
+        " locale=en_US<wait>",
+        " netcfg/get_domain=vm<wait>",
+        " netcfg/get_hostname=vagrant<wait>",
+        " grub-installer/bootdev=/dev/sda<wait>",
+        " noapic<wait>",
+        " preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg<wait>",
+        " -- <wait>",
+        "<enter><wait>"
+      ],
+      "boot_wait": "10s",
+      "headless": true,
+      "guest_os_type": "Ubuntu_64",
+      "disk_size": "{{ user `DISK_SIZE` }}",
+      "http_directory": "http",
+      "iso_url": "http://releases.ubuntu.com/18.04.1/{{ user `OS_VERSION` }}.iso",
+      "iso_checksum_type": "sha256",
+      "iso_checksum": "a825805899310626474ec22340bf42b69ccb222aeb0ff1ed481793fa3e81cbfb",
+      "output_directory": "builds/",
+      "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
+      "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_port": 22,
+      "ssh_wait_timeout": "10000s",
+      "vm_name": "{{ user `OS_VERSION` }}",
+      "vboxmanage": [
+        [ "modifyvm", "{{.Name}}", "--memory", "{{ user `MEMORY` }}" ],
+        [ "modifyvm", "{{.Name}}", "--cpus", "{{ user `CPUS` }}" ]
+      ],
+      "virtualbox_version_file": ".vbox_version"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "~/.ssh/id_rsa.pub",
+      "destination": "{{ user `TMP_SSH_PUB` }}"
+    },
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant'|{{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "environment_vars": [
+        "VAGRANT_SSH_PUB={{ user `TMP_SSH_PUB` }}",
+        "VAGRANT_HOME_DIR=/home/vagrant",
+        "IPADDR="
+      ],
+      "scripts": [
+        "scripts/update.sh",
+        "scripts/sshd.sh",
+        "scripts/networking.sh",
+        "scripts/sudoers.sh",
+        "scripts/ssh-vagrant.sh",
+        "scripts/vboxtools.sh",
+        "scripts/utils.sh",
+        "scripts/docker.sh",
+        "scripts/kubeadm.sh",
+        "scripts/filesystem.sh",
+        "scripts/cleanup.sh"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "output": "builds/virtualbox-ubuntu1804.box",
+      "type": "vagrant"
+    }
+  ]
+}
